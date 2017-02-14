@@ -107,6 +107,11 @@ func NewNotaryRepository(baseDir, gun, baseURL string, remoteStore store.RemoteS
 	return nRepo, nil
 }
 
+// GetGUN is a getter for the GUN object from a NotaryRepository
+func (r *NotaryRepository) GetGUN() string {
+	return r.gun
+}
+
 // Target represents a simplified version of the data TUF operates on, so external
 // applications don't have to depend on TUF data types.
 type Target struct {
@@ -587,12 +592,12 @@ func (r *NotaryRepository) ListRoles() ([]RoleWithSignatures, error) {
 
 // Publish pushes the local changes in signed material to the remote notary-server
 // Conceptually it performs an operation similar to a `git rebase`
-func (r *NotaryRepository) Publish() error {
+func (r *NotaryRepository) Publish(rootKeyIDs []string) error {
 	cl, err := r.GetChangelist()
 	if err != nil {
 		return err
 	}
-	if err = r.publish(cl); err != nil {
+	if err = r.publish(cl, rootKeyIDs); err != nil {
 		return err
 	}
 	if err = cl.Clear(""); err != nil {
@@ -606,22 +611,20 @@ func (r *NotaryRepository) Publish() error {
 
 // publish pushes the changes in the given changelist to the remote notary-server
 // Conceptually it performs an operation similar to a `git rebase`
-func (r *NotaryRepository) publish(cl changelist.Changelist) error {
+func (r *NotaryRepository) publish(cl changelist.Changelist, rootKeyIDs []string) error {
 	var initialPublish bool
 	// update first before publishing
 	if err := r.Update(true); err != nil {
 		// If the remote is not aware of the repo, then this is being published
-		// for the first time.  Try to load from disk instead for publishing.
+		// for the first time.  Try to initialize the repository before publishing.
 		if _, ok := err.(ErrRepositoryNotExist); ok {
-			err := r.bootstrapRepo()
+			err := r.Initialize(rootKeyIDs)
 			if err != nil {
-				logrus.Debugf("Unable to load repository from local files: %s",
+				logrus.Debugf("Unable to initialize repository at publish-time: %s",
 					err.Error())
-				if _, ok := err.(store.ErrMetaNotFound); ok {
-					return ErrRepoNotInitialized{}
-				}
 				return err
 			}
+
 			// Ensure we will push the initial root and targets file.  Either or
 			// both of the root and targets may not be marked as Dirty, since
 			// there may not be any changes that update them, so use a
@@ -1021,7 +1024,7 @@ func (r *NotaryRepository) RotateKey(role string, serverManagesKey bool, keyList
 	if err := r.rootFileKeyChange(cl, role, changelist.ActionCreate, pubKeyList); err != nil {
 		return err
 	}
-	return r.publish(cl)
+	return r.publish(cl, []string{r.GetGUN()})
 }
 
 // Given a set of new keys to rotate to and a set of keys to drop, returns the list of current keys to use
