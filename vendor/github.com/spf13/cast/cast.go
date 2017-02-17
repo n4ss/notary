@@ -27,6 +27,11 @@ func ToFloat64(i interface{}) float64 {
 	return v
 }
 
+func ToInt64(i interface{}) int64 {
+	v, _ := ToInt64E(i)
+	return v
+}
+
 func ToInt(i interface{}) int {
 	v, _ := ToIntE(i)
 	return v
@@ -42,6 +47,11 @@ func ToStringMapString(i interface{}) map[string]string {
 	return v
 }
 
+func ToStringMapStringSlice(i interface{}) map[string][]string {
+	v, _ := ToStringMapStringSliceE(i)
+	return v
+}
+
 func ToStringMapBool(i interface{}) map[string]bool {
 	v, _ := ToStringMapBoolE(i)
 	return v
@@ -54,6 +64,11 @@ func ToStringMap(i interface{}) map[string]interface{} {
 
 func ToSlice(i interface{}) []interface{} {
 	v, _ := ToSliceE(i)
+	return v
+}
+
+func ToBoolSlice(i interface{}) []bool {
+	v, _ := ToBoolSliceE(i)
 	return v
 }
 
