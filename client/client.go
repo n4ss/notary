@@ -1028,7 +1028,7 @@ func (r *NotaryRepository) RotateKey(role string, serverManagesKey bool, keyList
 	if err := r.rootFileKeyChange(cl, role, changelist.ActionCreate, pubKeyList); err != nil {
 		return err
 	}
-	return r.publish(cl, []string{r.GetGUN()})
+	return r.publish(cl)
 }
 
 // Given a set of new keys to rotate to and a set of keys to drop, returns the list of current keys to use
