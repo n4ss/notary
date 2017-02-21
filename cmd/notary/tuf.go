@@ -358,11 +358,6 @@ func (t *tufCommander) tufDeleteGUN(cmd *cobra.Command, args []string) error {
 
 	gun := args[0]
 
-	trustPin, err := getTrustPinning(config)
-	if err != nil {
-		return err
-	}
-
 	// Only initialize a roundtripper if we get the remote flag
 	var rt http.RoundTripper
 	var remoteDeleteInfo string
@@ -374,16 +369,15 @@ func (t *tufCommander) tufDeleteGUN(cmd *cobra.Command, args []string) error {
 		remoteDeleteInfo = " and remote"
 	}
 
-	nRepo, err := notaryclient.NewFileCachedNotaryRepository(
-		config.GetString("trust_dir"), gun, getRemoteTrustServer(config), rt, t.retriever, trustPin)
-
-	if err != nil {
-		return err
-	}
-
 	cmd.Printf("Deleting trust data for repository %s\n", gun)
 
-	if err := nRepo.DeleteTrustData(t.deleteRemote); err != nil {
+	if err := notaryclient.DeleteTrustData(
+		config.GetString("trust_dir"),
+		gun,
+		getRemoteTrustServer(config),
+		rt,
+		t.deleteRemote,
+	); err != nil {
 		return err
 	}
 	cmd.Printf("Successfully deleted local%s trust data for repository %s\n", remoteDeleteInfo, gun)
@@ -409,14 +403,8 @@ func importRootKey(cmd *cobra.Command, rootKey string, nRepo *notaryclient.Notar
 	}
 
 	var rootKeyID string
-	if len(rootKeyList) < 1 {
-		cmd.Println("No root keys found. Generating a new root key...")
-		rootPublicKey, err := nRepo.CryptoService.Create(data.CanonicalRootRole, "", data.ECDSAKey)
-		if err != nil {
-			return nil, err
-		}
-		rootKeyID = rootPublicKey.ID()
-	} else {
+
+	if len(rootKeyList) > 0 {
 		// Chooses the first root key available, which is initialization specific
 		// but should return the HW one first.
 		rootKeyID = rootKeyList[0]
@@ -702,18 +690,7 @@ func (t *tufCommander) tufPublish(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	var rootKeyIDs []string
-
-	if err := nRepo.Update(true); err != nil {
-		if _, ok := err.(notaryclient.ErrRepositoryNotExist); ok {
-			rootKeyIDs, err = importRootKey(cmd, t.rootKey, nRepo, t.retriever)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return publishAndPrintToCLI(cmd, nRepo, rootKeyIDs)
+	return publishAndPrintToCLI(cmd, nRepo)
 }
 
 func (t *tufCommander) tufRemove(cmd *cobra.Command, args []string) error {
@@ -1058,11 +1035,11 @@ func maybeAutoPublish(cmd *cobra.Command, doPublish bool, gun string, config *vi
 	}
 
 	cmd.Println("Auto-publishing changes to", nRepo.GetGUN())
-	return publishAndPrintToCLI(cmd, nRepo, nil)
+	return publishAndPrintToCLI(cmd, nRepo)
 }
 
-func publishAndPrintToCLI(cmd *cobra.Command, nRepo *notaryclient.NotaryRepository, rootKeyIDs []string) error {
-	if err := nRepo.Publish(rootKeyIDs); err != nil {
+func publishAndPrintToCLI(cmd *cobra.Command, nRepo *notaryclient.NotaryRepository) error {
+	if err := nRepo.Publish(); err != nil {
 		return err
 	}
 	cmd.Printf("Successfully published changes for repository %s\n", nRepo.GetGUN())
