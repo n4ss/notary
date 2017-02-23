@@ -390,7 +390,6 @@ func (t *tufCommander) tufDeleteGUN(cmd *cobra.Command, args []string) error {
 
 func importRootKey(cmd *cobra.Command, rootKey string, nRepo *notaryclient.NotaryRepository, retriever notary.PassRetriever) ([]string, error) {
 	var rootKeyList []string
-	var err error
 
 	if rootKey != "" {
 		privKey, err := readKey(data.CanonicalRootRole, rootKey, retriever)
@@ -406,15 +405,20 @@ func importRootKey(cmd *cobra.Command, rootKey string, nRepo *notaryclient.Notar
 		rootKeyList = nRepo.CryptoService.ListKeys(data.CanonicalRootRole)
 	}
 
+<<<<<<< HEAD
 	var rootKeyID string
+=======
+>>>>>>> e3abcd62... Fix rootkey IDs list creation causing faulty access at repo init
 	if len(rootKeyList) > 0 {
 		// Chooses the first root key available, which is initialization specific
 		// but should return the HW one first.
-		rootKeyID = rootKeyList[0]
+		rootKeyID := rootKeyList[0]
 		cmd.Printf("Root key found, using: %s\n", rootKeyID)
+
+		return []string{rootKeyID}, nil
 	}
 
-	return []string{rootKeyID}, err
+	return []string{}, nil
 }
 
 func (t *tufCommander) tufInit(cmd *cobra.Command, args []string) error {
