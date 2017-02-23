@@ -1137,3 +1137,18 @@ func DeleteTrustData(baseDir string, gun data.GUN, URL string, rt http.RoundTrip
 	}
 	return nil
 }
+
+// SetBaseURL updates the repository's base URL and its associated remote store
+func (r *NotaryRepository) setBaseURL(baseURL string) error {
+	// We try to retrieve the remote store before updating the repository
+	remoteStore, err := getRemoteStore(baseURL, r.gun, r.roundTrip)
+	if err != nil {
+		return err
+	}
+
+	// Update the repository
+	r.baseURL = baseURL
+	r.remoteStore = remoteStore
+
+	return nil
+}
