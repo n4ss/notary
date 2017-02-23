@@ -405,10 +405,6 @@ func importRootKey(cmd *cobra.Command, rootKey string, nRepo *notaryclient.Notar
 		rootKeyList = nRepo.CryptoService.ListKeys(data.CanonicalRootRole)
 	}
 
-<<<<<<< HEAD
-	var rootKeyID string
-=======
->>>>>>> e3abcd62... Fix rootkey IDs list creation causing faulty access at repo init
 	if len(rootKeyList) > 0 {
 		// Chooses the first root key available, which is initialization specific
 		// but should return the HW one first.
@@ -1041,14 +1037,14 @@ func maybeAutoPublish(cmd *cobra.Command, doPublish bool, gun data.GUN, config *
 		return err
 	}
 
-	cmd.Println("Auto-publishing changes to", nRepo.GetGUN())
-	return publishAndPrintToCLI(cmd, nRepo)
+	cmd.Println("Auto-publishing changes to", gun)
+	return publishAndPrintToCLI(cmd, nRepo, gun)
 }
 
 func publishAndPrintToCLI(cmd *cobra.Command, nRepo *notaryclient.NotaryRepository, gun data.GUN) error {
 	if err := nRepo.Publish(); err != nil {
 		return err
 	}
-	cmd.Printf("Successfully published changes for repository %s\n", nRepo.GetGUN())
+	cmd.Printf("Successfully published changes for repository %s\n", gun)
 	return nil
 }
