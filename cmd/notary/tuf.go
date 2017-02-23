@@ -692,7 +692,7 @@ func (t *tufCommander) tufPublish(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return publishAndPrintToCLI(cmd, nRepo)
+	return publishAndPrintToCLI(cmd, nRepo, gun)
 }
 
 func (t *tufCommander) tufRemove(cmd *cobra.Command, args []string) error {

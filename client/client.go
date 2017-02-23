@@ -114,11 +114,6 @@ func NewNotaryRepository(baseDir string, gun data.GUN, baseURL string, remoteSto
 	return nRepo, nil
 }
 
-// GetGUN is a getter for the GUN object from a NotaryRepository
-func (r *NotaryRepository) GetGUN() string {
-	return r.gun
-}
-
 // Target represents a simplified version of the data TUF operates on, so external
 // applications don't have to depend on TUF data types.
 type Target struct {
@@ -614,7 +609,7 @@ func (r *NotaryRepository) Publish() error {
 
 func (r *NotaryRepository) isMetaCached() (bool, error) {
 	for _, role := range data.BaseRoles {
-		_, err := r.cache.GetSized(role, store.NoSizeLimit)
+		_, err := r.cache.GetSized(role.String(), store.NoSizeLimit)
 		if err != nil {
 			if _, ok := err.(store.ErrMetaNotFound); ok {
 				continue

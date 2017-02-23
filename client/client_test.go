@@ -1650,14 +1650,13 @@ func testPublishNoData(t *testing.T, rootType string, clearCache, serverManagesS
 	}
 }
 
-// Publishing an uninitialized repo will fail, but initializing and republishing
-// after should succeed
+// Initializing a repo and republishing after should succeed
 func TestPublishUninitializedRepo(t *testing.T) {
 	var gun data.GUN = "docker.com/notary"
 	ts := fullTestServer(t)
 	defer ts.Close()
 
-	// uninitialized repo should fail to publish
+	// uninitialized repo should not fail to publish
 	tempBaseDir, err := ioutil.TempDir("", "notary-tests")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempBaseDir)
@@ -1666,20 +1665,8 @@ func TestPublishUninitializedRepo(t *testing.T) {
 		http.DefaultTransport, passphraseRetriever, trustpinning.TrustPinConfig{})
 	require.NoError(t, err, "error creating repository: %s", err)
 	err = repo.Publish()
-	require.Error(t, err)
-
-	// no metadata created
-	requireRepoHasExpectedMetadata(t, repo, data.CanonicalRootRole, false)
-	requireRepoHasExpectedMetadata(t, repo, data.CanonicalSnapshotRole, false)
-	requireRepoHasExpectedMetadata(t, repo, data.CanonicalTargetsRole, false)
-
-	// now, initialize and republish in the same directory
-	rootPubKey, err := repo.CryptoService.Create(data.CanonicalRootRole, repo.gun, data.ECDSAKey)
-	require.NoError(t, err, "error generating root key: %s", err)
-
-	require.NoError(t, repo.Initialize([]string{rootPubKey.ID()}))
-
-	// now metadata is created
+	require.NoError(t, err)
+	// Metadata was created
 	requireRepoHasExpectedMetadata(t, repo, data.CanonicalRootRole, true)
 	requireRepoHasExpectedMetadata(t, repo, data.CanonicalSnapshotRole, true)
 	requireRepoHasExpectedMetadata(t, repo, data.CanonicalTargetsRole, true)
