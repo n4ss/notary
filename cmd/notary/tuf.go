@@ -191,17 +191,12 @@ func (t *tufCommander) tufWitness(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	trustPin, err := getTrustPinning(config)
-	if err != nil {
-		return err
-	}
+
 	gun := data.GUN(args[0])
 	roles := data.NewRoleList(args[1:])
 
-	// no online operations are performed by add so the transport argument
-	// should be nil
-	nRepo, err := notaryclient.NewFileCachedNotaryRepository(
-		config.GetString("trust_dir"), gun, getRemoteTrustServer(config), nil, t.retriever, trustPin)
+	fact := ConfigureRepo(config, t.retriever, false)
+	nRepo, err := fact(gun)
 	if err != nil {
 		return err
 	}
@@ -266,15 +261,8 @@ func (t *tufCommander) tufAddByHash(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	trustPin, err := getTrustPinning(config)
-	if err != nil {
-		return err
-	}
-
-	// no online operations are performed by add so the transport argument
-	// should be nil
-	nRepo, err := notaryclient.NewFileCachedNotaryRepository(
-		config.GetString("trust_dir"), gun, getRemoteTrustServer(config), nil, t.retriever, trustPin)
+	fact := ConfigureRepo(config, t.retriever, false)
+	nRepo, err := fact(gun)
 	if err != nil {
 		return err
 	}
@@ -320,15 +308,8 @@ func (t *tufCommander) tufAdd(cmd *cobra.Command, args []string) error {
 	targetName := args[1]
 	targetPath := args[2]
 
-	trustPin, err := getTrustPinning(config)
-	if err != nil {
-		return err
-	}
-
-	// no online operations are performed by add so the transport argument
-	// should be nil
-	nRepo, err := notaryclient.NewFileCachedNotaryRepository(
-		config.GetString("trust_dir"), gun, getRemoteTrustServer(config), nil, t.retriever, trustPin)
+	fact := ConfigureRepo(config, t.retriever, false)
+	nRepo, err := fact(gun)
 	if err != nil {
 		return err
 	}
@@ -360,14 +341,14 @@ func (t *tufCommander) tufDeleteGUN(cmd *cobra.Command, args []string) error {
 	gun := data.GUN(args[0])
 
 	// Only initialize a roundtripper if we get the remote flag
-	var rt http.RoundTripper
 	var remoteDeleteInfo string
 	if t.deleteRemote {
-		rt, err = getTransport(config, gun, admin)
-		if err != nil {
-			return err
-		}
 		remoteDeleteInfo = " and remote"
+	}
+
+	rt, err := getTransport(config, gun, admin)
+	if err != nil {
+		return err
 	}
 
 	cmd.Printf("Deleting trust data for repository %s\n", gun)
@@ -397,18 +378,8 @@ func (t *tufCommander) tufInit(cmd *cobra.Command, args []string) error {
 	}
 	gun := data.GUN(args[0])
 
-	rt, err := getTransport(config, gun, readWrite)
-	if err != nil {
-		return err
-	}
-
-	trustPin, err := getTrustPinning(config)
-	if err != nil {
-		return err
-	}
-
-	nRepo, err := notaryclient.NewFileCachedNotaryRepository(
-		config.GetString("trust_dir"), gun, getRemoteTrustServer(config), rt, t.retriever, trustPin)
+	fact := ConfigureRepo(config, t.retriever, true)
+	nRepo, err := fact(gun)
 	if err != nil {
 		return err
 	}
@@ -420,19 +391,19 @@ func (t *tufCommander) tufInit(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		err = nRepo.CryptoService.AddKey(data.CanonicalRootRole, "", privKey)
+		err = nRepo.CryptoService().AddKey(data.CanonicalRootRole, "", privKey)
 		if err != nil {
 			return fmt.Errorf("Error importing key: %v", err)
 		}
 		rootKeyList = []string{privKey.ID()}
 	} else {
-		rootKeyList = nRepo.CryptoService.ListKeys(data.CanonicalRootRole)
+		rootKeyList = nRepo.CryptoService().ListKeys(data.CanonicalRootRole)
 	}
 
 	var rootKeyID string
 	if len(rootKeyList) < 1 {
 		cmd.Println("No root keys found. Generating a new root key...")
-		rootPublicKey, err := nRepo.CryptoService.Create(data.CanonicalRootRole, "", data.ECDSAKey)
+		rootPublicKey, err := nRepo.CryptoService().Create(data.CanonicalRootRole, "", data.ECDSAKey)
 		if err != nil {
 			return err
 		}
@@ -495,18 +466,8 @@ func (t *tufCommander) tufList(cmd *cobra.Command, args []string) error {
 	}
 	gun := data.GUN(args[0])
 
-	rt, err := getTransport(config, gun, readOnly)
-	if err != nil {
-		return err
-	}
-
-	trustPin, err := getTrustPinning(config)
-	if err != nil {
-		return err
-	}
-
-	nRepo, err := notaryclient.NewFileCachedNotaryRepository(
-		config.GetString("trust_dir"), gun, getRemoteTrustServer(config), rt, t.retriever, trustPin)
+	fact := ConfigureRepo(config, t.retriever, true)
+	nRepo, err := fact(gun)
 	if err != nil {
 		return err
 	}
@@ -534,18 +495,8 @@ func (t *tufCommander) tufLookup(cmd *cobra.Command, args []string) error {
 	gun := data.GUN(args[0])
 	targetName := args[1]
 
-	rt, err := getTransport(config, gun, readOnly)
-	if err != nil {
-		return err
-	}
-
-	trustPin, err := getTrustPinning(config)
-	if err != nil {
-		return err
-	}
-
-	nRepo, err := notaryclient.NewFileCachedNotaryRepository(
-		config.GetString("trust_dir"), gun, getRemoteTrustServer(config), rt, t.retriever, trustPin)
+	fact := ConfigureRepo(config, t.retriever, true)
+	nRepo, err := fact(gun)
 	if err != nil {
 		return err
 	}
@@ -571,13 +522,8 @@ func (t *tufCommander) tufStatus(cmd *cobra.Command, args []string) error {
 	}
 	gun := data.GUN(args[0])
 
-	trustPin, err := getTrustPinning(config)
-	if err != nil {
-		return err
-	}
-
-	nRepo, err := notaryclient.NewFileCachedNotaryRepository(
-		config.GetString("trust_dir"), gun, getRemoteTrustServer(config), nil, t.retriever, trustPin)
+	fact := ConfigureRepo(config, t.retriever, false)
+	nRepo, err := fact(gun)
 	if err != nil {
 		return err
 	}
@@ -628,13 +574,8 @@ func (t *tufCommander) tufReset(cmd *cobra.Command, args []string) error {
 	}
 	gun := data.GUN(args[0])
 
-	trustPin, err := getTrustPinning(config)
-	if err != nil {
-		return err
-	}
-
-	nRepo, err := notaryclient.NewFileCachedNotaryRepository(
-		config.GetString("trust_dir"), gun, getRemoteTrustServer(config), nil, t.retriever, trustPin)
+	fact := ConfigureRepo(config, t.retriever, false)
+	nRepo, err := fact(gun)
 	if err != nil {
 		return err
 	}
@@ -670,18 +611,8 @@ func (t *tufCommander) tufPublish(cmd *cobra.Command, args []string) error {
 
 	cmd.Println("Pushing changes to", gun)
 
-	rt, err := getTransport(config, gun, readWrite)
-	if err != nil {
-		return err
-	}
-
-	trustPin, err := getTrustPinning(config)
-	if err != nil {
-		return err
-	}
-
-	nRepo, err := notaryclient.NewFileCachedNotaryRepository(
-		config.GetString("trust_dir"), gun, getRemoteTrustServer(config), rt, t.retriever, trustPin)
+	fact := ConfigureRepo(config, t.retriever, true)
+	nRepo, err := fact(gun)
 	if err != nil {
 		return err
 	}
@@ -701,15 +632,8 @@ func (t *tufCommander) tufRemove(cmd *cobra.Command, args []string) error {
 	gun := data.GUN(args[0])
 	targetName := args[1]
 
-	trustPin, err := getTrustPinning(config)
-	if err != nil {
-		return err
-	}
-
-	// no online operation are performed by remove so the transport argument
-	// should be nil.
-	repo, err := notaryclient.NewFileCachedNotaryRepository(
-		config.GetString("trust_dir"), gun, getRemoteTrustServer(config), nil, t.retriever, trustPin)
+	fact := ConfigureRepo(config, t.retriever, false)
+	repo, err := fact(gun)
 	if err != nil {
 		return err
 	}
@@ -743,18 +667,8 @@ func (t *tufCommander) tufVerify(cmd *cobra.Command, args []string) error {
 	gun := data.GUN(args[0])
 	targetName := args[1]
 
-	rt, err := getTransport(config, gun, readOnly)
-	if err != nil {
-		return err
-	}
-
-	trustPin, err := getTrustPinning(config)
-	if err != nil {
-		return err
-	}
-
-	nRepo, err := notaryclient.NewFileCachedNotaryRepository(
-		config.GetString("trust_dir"), gun, getRemoteTrustServer(config), rt, t.retriever, trustPin)
+	fact := ConfigureRepo(config, t.retriever, true)
+	nRepo, err := fact(gun)
 	if err != nil {
 		return err
 	}
@@ -1014,19 +928,8 @@ func maybeAutoPublish(cmd *cobra.Command, doPublish bool, gun data.GUN, config *
 		return nil
 	}
 
-	// We need to set up a http RoundTripper when publishing
-	rt, err := getTransport(config, gun, readWrite)
-	if err != nil {
-		return err
-	}
-
-	trustPin, err := getTrustPinning(config)
-	if err != nil {
-		return err
-	}
-
-	nRepo, err := notaryclient.NewFileCachedNotaryRepository(
-		config.GetString("trust_dir"), gun, getRemoteTrustServer(config), rt, passRetriever, trustPin)
+	fact := ConfigureRepo(config, passRetriever, true)
+	nRepo, err := fact(gun)
 	if err != nil {
 		return err
 	}
@@ -1035,7 +938,7 @@ func maybeAutoPublish(cmd *cobra.Command, doPublish bool, gun data.GUN, config *
 	return publishAndPrintToCLI(cmd, nRepo, gun)
 }
 
-func publishAndPrintToCLI(cmd *cobra.Command, nRepo *notaryclient.NotaryRepository, gun data.GUN) error {
+func publishAndPrintToCLI(cmd *cobra.Command, nRepo notaryclient.Repository, gun data.GUN) error {
 	if err := nRepo.Publish(); err != nil {
 		return err
 	}
