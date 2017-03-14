@@ -1,12 +1,12 @@
 package grpcauth
 
 import (
-	"testing"
+	"github.com/docker/notary/client"
+	"github.com/docker/notary/client_api/api"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"net"
-	"github.com/stretchr/testify/require"
-	"github.com/docker/notary/client_api/api"
-	"github.com/docker/notary/client"
+	"testing"
 )
 
 func TestServerAuthorizer(t *testing.T) {
@@ -21,7 +21,7 @@ func TestServerAuthorizer(t *testing.T) {
 	api.NewServer("", "", srv)
 	go srv.Serve(lis)
 
-	conn, err :=  grpc.Dial(
+	conn, err := grpc.Dial(
 		"localhost:6789",
 		grpc.WithInsecure(),
 		grpc.WithUnaryInterceptor(NewClientAuthorizer()),

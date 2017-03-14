@@ -5,12 +5,12 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/docker/distribution/registry/auth"
 	google_protobuf "github.com/golang/protobuf/ptypes/empty"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
-	"github.com/Sirupsen/logrus"
 )
 
 type guner interface {
@@ -82,7 +82,7 @@ func (s ServerAuthorizer) buildAuthChallenge(gun, method string) (metadata.MD, b
 		})
 	}
 
-	str = fmt.Sprintf("%s,scope=%q", str, )
+	str = fmt.Sprintf("%s,scope=%q", str)
 	return metadata.MD{
 		"WWW-Authenticate": []string{str},
 	}, true
