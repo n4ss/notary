@@ -39,12 +39,10 @@ func NewServerAuthorizer(tokenCAPath string, permissions map[string][]string) (g
 func (s ServerAuthorizer) Interceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 	gnr, ok := req.(guner)
 	if !ok {
-		if !ok {
-			return &google_protobuf.Empty{}, grpc.Errorf(
-				codes.Unauthenticated,
-				"no authorization credentials provided",
-			)
-		}
+		return &google_protobuf.Empty{}, grpc.Errorf(
+			codes.Unauthenticated,
+			"no authorization credentials provided",
+		)
 	}
 	md, ok := metadata.FromContext(ctx)
 	if !ok || !s.authorized(md) {
